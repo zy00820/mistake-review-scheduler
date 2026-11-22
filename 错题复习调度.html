@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>错题复习调度</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234F6DF5'/%3E%3Cpath d='M7 12.5l3.2 3.2L17 9' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg1:#ECF0F8; --bg2:#F8FAFD;
+  --glass:rgba(255,255,255,.62);
+  --glass-border:rgba(255,255,255,.78);
+  --ink:#1E293B; --ink-2:#64748B; --line:#E2E8F2;
+  --accent:#4F6DF5; --accent-soft:rgba(79,109,245,.12);
+  --shadow:0 10px 30px rgba(31,45,80,.10);
+  --radius:18px;
+  --c-concept:#6366F1; --c-calc:#F59E0B; --c-check:#10B981; --c-method:#EF6461;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--ink);
+  background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 60%);
+  min-height:100vh; line-height:1.55;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 20px 64px}
+
+/* ===== 顶栏 ===== */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:44px;height:44px;border-radius:13px;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(79,109,245,.32)}
+.logo svg{width:24px;height:24px}
+h1{font-size:22px;font-weight:700;letter-spacing:.5px}
+.sub{font-size:13px;color:var(--ink-2);margin-top:2px}
+.actions{display:flex;gap:10px}
+.btn{border:none;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.18s}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:0 8px 18px rgba(79,109,245,.3)}
+.btn.primary:hover{background:#3E5BE0}
+.btn.ghost{background:var(--glass);border:1px solid var(--glass-border);color:var(--ink)}
+.btn.ghost:hover{background:rgba(255,255,255,.85)}
+
+/* ===== 看板 ===== */
+.board{display:grid;grid-template-columns:repeat(3,1fr) 1.4fr;gap:14px;margin-bottom:22px}
+.stat,.heat{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.stat .num{font-size:30px;font-weight:700;display:block}
+.stat .label{font-size:13px;color:var(--ink-2)}
+.heat h3{font-size:13px;color:var(--ink-2);font-weight:500;margin-bottom:10px}
+.heat-row{display:flex;gap:6px;align-items:stretch;height:56px}
+.heat-bar{flex:1;height:100%;background:var(--accent-soft);border-radius:6px 6px 3px 3px;position:relative}
+.heat-bar i{position:absolute;bottom:0;left:0;right:0;background:var(--accent);border-radius:6px 6px 3px 3px;opacity:.85}
+.heat-labels{display:flex;gap:6px;margin-top:6px}
+.heat-labels span{flex:1;text-align:center;font-size:11px;color:var(--ink-2)}
+
+/* ===== 工具栏 ===== */
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.tabs{display:flex;background:var(--glass);border:1px solid var(--glass-border);border-radius:13px;padding:4px}
+.tab{border:none;background:transparent;padding:8px 16px;border-radius:10px;font-size:14px;cursor:pointer;color:var(--ink-2);font-family:inherit}
+.tab.active{background:#fff;color:var(--accent);font-weight:500;box-shadow:0 4px 12px rgba(31,45,80,.1)}
+.filters{display:flex;gap:10px}
+select{background:var(--glass);border:1px solid var(--glass-border);border-radius:11px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--ink)}
+
+/* ===== 卡片 ===== */
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:12px}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.tag.subject{background:rgba(15,23,42,.06);color:var(--ink)}
+.tag.type{color:#fff}
+.note{font-size:14.5px;line-height:1.6;color:var(--ink)}
+.card-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-2);font-size:12.5px}
+.mastery{display:flex;align-items:center;gap:8px}
+.ring{width:34px;height:34px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:3.5}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--accent);stroke-linecap:round}
+.mastery-text{font-size:12px;color:var(--ink-2)}
+.card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mini{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+.mini.good{background:var(--accent);border-color:var(--accent);color:#fff}
+.mini.danger{background:transparent;color:var(--ink-2)}
+.due-soon{color:var(--c-method);font-weight:500}
+
+/* ===== 空态 ===== */
+.empty{text-align:center;padding:70px 20px;color:var(--ink-2)}
+.empty svg{width:56px;height:56px;margin-bottom:14px;opacity:.5}
+.empty h3{font-size:17px;color:var(--ink);margin-bottom:6px}
+.empty p{font-size:14px}
+
+/* ===== 抽屉 ===== */
+.mask{position:fixed;inset:0;background:rgba(31,45,80,.28);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:.25s;z-index:20}
+.mask.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(420px,92vw);background:rgba(255,255,255,.9);backdrop-filter:blur(20px);box-shadow:-16px 0 40px rgba(31,45,80,.18);transform:translateX(100%);transition:.28s;z-index:21;padding:26px;overflow-y:auto}
+.drawer.show{transform:translateX(0)}
+.drawer h2{font-size:18px;margin-bottom:18px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink)}
+.field textarea{resize:vertical;min-height:84px}
+.drawer .btn.primary{width:100%;margin-top:6px}
+
+/* ===== Toast ===== */
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:30}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:860px){
+  .board{grid-template-columns:repeat(2,1fr)}
+  .cards{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .board{grid-template-columns:1fr 1fr}
+  .heat{grid-column:1 / -1}
+}
+@media (max-width:640px){
+  input,select,textarea{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 12.5l3.2 3.2L17 9" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1>错题复习调度</h1>
+        <p class="sub">按掌握度与有序程度安排复习顺序的本地小工具</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="exportBtn">导出 CSV</button>
+      <button class="btn primary" id="addBtn">录入错题</button>
+    </div>
+  </header>
+
+  <section class="board">
+    <div class="stat glass"><span class="num" id="statDue">0</span><span class="label">今日待复习</span></div>
+    <div class="stat glass"><span class="num" id="statMastered">0</span><span class="label">已掌握归档</span></div>
+    <div class="stat glass"><span class="num" id="statTotal">0</span><span class="label">累计错题</span></div>
+    <div class="heat glass">
+      <h3>近 7 天复习记录</h3>
+      <div class="heat-row" id="heatRow"></div>
+      <div class="heat-labels" id="heatLabels"></div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <div class="tabs">
+      <button class="tab active" data-view="due">今日复习</button>
+      <button class="tab" data-view="all">全部错题</button>
+    </div>
+    <div class="filters">
+      <select id="filterSubject"><option value="">全部科目</option></select>
+      <select id="filterType"><option value="">全部错因</option></select>
+    </div>
+  </section>
+
+  <main class="cards" id="cardList"></main>
+  <div class="empty" id="empty"></div>
+</div>
+
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <h2>录入错题</h2>
+  <form id="form">
+    <div class="field">
+      <label>科目</label>
+      <select id="fSubject" required></select>
+    </div>
+    <div class="field">
+      <label>知识点</label>
+      <input id="fTopic" type="text" placeholder="如：单调性 / 氧化还原 / 定语从句" required>
+    </div>
+    <div class="field">
+      <label>错因类型</label>
+      <select id="fType">
+        <option value="概念不清">概念不清</option>
+        <option value="计算失误">计算失误</option>
+        <option value="审题失误">审题失误</option>
+        <option value="方法不会">方法不会</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>题目简述</label>
+      <textarea id="fNote" placeholder="记录题目要点或错解思路，便于复习时回忆" required></textarea>
+    </div>
+    <button type="submit" class="btn primary">保存错题</button>
+  </form>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 常量与规则 ===== */
+const STORE_KEY = "mistakeReview.v1";
+const SUBJECTS = ["数学", "物理", "化学", "英语", "语文", "其他"];
+const TYPES = ["概念不清", "计算失误", "审题失误", "方法不会"];
+// 掌握等级 1—5 对应的复习间隔（天）；达到 5 级归档为已掌握
+const INTERVALS = [1, 3, 7, 15, 30];
+const MASTER_LEVEL = 5;
+const TYPE_COLOR = {
+  "概念不清": "#6366F1", "计算失误": "#F59E0B",
+  "审题失误": "#10B981", "方法不会": "#EF6461"
+};
+
+/* ===== 日期工具 ===== */
+const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const today = () => fmt(new Date());
+const addDays = (dateStr, n) => { const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + n); return fmt(d); };
+
+/* ===== 数据读写 ===== */
+let records = load();
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* 数据损坏时重置 */ }
+  return seedSample();
+}
+function save() { localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
+
+function seedSample() {
+  const t = today();
+  return [
+    { id: uid(), subject: "数学", topic: "函数单调性", type: "概念不清", note: "示例：混淆单调区间与定义域的写法，复习时先回顾定义再做题。", createdAt: addDays(t, -3), lastReviewed: addDays(t, -3), nextReview: t, level: 2, reviews: 1, history: [{ date: addDays(t, -3), result: "good" }], sample: true },
+    { id: uid(), subject: "化学", topic: "氧化还原反应", type: "方法不会", note: "示例：不会用化合价升降判断电子转移方向，需补配平步骤。", createdAt: addDays(t, -2), lastReviewed: addDays(t, -2), nextReview: t, level: 1, reviews: 0, history: [], sample: true },
+    { id: uid(), subject: "英语", topic: "定语从句", type: "审题失误", note: "示例：关系代词与关系副词选用混淆，注意先行词在从句中的成分。", createdAt: addDays(t, -5), lastReviewed: addDays(t, -1), nextReview: addDays(t, 2), level: 3, reviews: 2, history: [{ date: addDays(t, -5), result: "good" }, { date: addDays(t, -1), result: "good" }], sample: true }
+  ];
+}
+function uid() { return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+/* ===== 调度规则 ===== */
+function applyReview(rec, result) {
+  rec.reviews += 1;
+  rec.lastReviewed = today();
+  rec.history.push({ date: today(), result });
+  if (result === "good") {
+    rec.level = Math.min(MASTER_LEVEL, rec.level + 1);
+  } else {
+    rec.level = Math.max(1, rec.level - 1);
+  }
+  rec.nextReview = rec.level >= MASTER_LEVEL ? "" : addDays(today(), INTERVALS[rec.level - 1]);
+}
+const isMastered = rec => rec.level >= MASTER_LEVEL;
+const isDue = rec => !isMastered(rec) && rec.nextReview <= today();
+
+/* ===== 状态 ===== */
+let view = "due";
+let filterSubject = "";
+let filterType = "";
+
+/* ===== DOM 引用 ===== */
+const $ = id => document.getElementById(id);
+const listEl = $("cardList"), emptyEl = $("empty");
+
+/* ===== 渲染：筛选与排序 ===== */
+function getVisible() {
+  let arr = records.slice();
+  if (filterSubject) arr = arr.filter(r => r.subject === filterSubject);
+  if (filterType) arr = arr.filter(r => r.type === filterType);
+  if (view === "due") arr = arr.filter(isDue);
+  // 今日清单：掌握等级低的优先，再按下次复习日期早的优先
+  arr.sort((a, b) => (a.level - b.level) || (a.nextReview || "").localeCompare(b.nextReview || ""));
+  return arr;
+}
+
+function ringSVG(level) {
+  const r = 14, c = 2 * Math.PI * r, pct = level / MASTER_LEVEL;
+  return `<svg class="ring" viewBox="0 0 34 34">
+    <circle class="bg" cx="17" cy="17" r="${r}"/>
+    <circle class="fg" cx="17" cy="17" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - pct)).toFixed(1)}"/>
+  </svg>`;
+}
+
+function cardHTML(rec) {
+  const due = isDue(rec);
+  const mastered = isMastered(rec);
+  const typeColor = TYPE_COLOR[rec.type] || "#64748B";
+  const next = mastered ? "已掌握归档" : (due ? "今日待复习" : `下次复习 ${rec.nextReview}`);
+  return `<article class="card">
+    <div class="card-top">
+      <div class="tags">
+        <span class="tag subject">${rec.subject}</span>
+        <span class="tag type" style="background:${typeColor}">${rec.type}</span>
+        <span class="tag">${rec.topic}</span>
+      </div>
+    </div>
+    <p class="note">${escapeHtml(rec.note)}</p>
+    <div class="card-meta">
+      <div class="mastery">${ringSVG(rec.level)}<span class="mastery-text">掌握等级 ${rec.level}/${MASTER_LEVEL} · 已复习 ${rec.reviews} 次</span></div>
+      <span class="${due ? "due-soon" : ""}">${next}</span>
+    </div>
+    <div class="card-actions">
+      ${mastered ? "" : `<button class="mini" data-act="weak" data-id="${rec.id}">仍薄弱</button>
+        <button class="mini good" data-act="good" data-id="${rec.id}">已掌握</button>`}
+      <button class="mini danger" data-act="del" data-id="${rec.id}">删除</button>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const arr = getVisible();
+  // 看板统计
+  $("statDue").textContent = records.filter(isDue).length;
+  $("statMastered").textContent = records.filter(isMastered).length;
+  $("statTotal").textContent = records.length;
+  renderHeat();
+
+  if (arr.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl.style.display = "block";
+    emptyEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none"><path d="M9 5h6M7 5h10v14H7z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <h3>${view === "due" ? "今天没有待复习的错题" : "还没有错题记录"}</h3>
+      <p>${view === "due" ? "到期待复习的错题会自动出现在这里。" : "点击右上角「录入错题」添加第一条记录。"}</p>`;
+    return;
+  }
+  emptyEl.style.display = "none";
+  listEl.innerHTML = arr.map(cardHTML).join("");
+}
+
+/* ===== 近 7 天复习热力 ===== */
+function renderHeat() {
+  const days = [];
+  for (let i = 6; i >= 0; i--) days.push(addDays(today(), -i));
+  const counts = days.map(d => records.reduce((s, r) => s + r.history.filter(h => h.date === d).length, 0));
+  const max = Math.max(1, ...counts);
+  $("heatRow").innerHTML = counts.map(c =>
+    `<div class="heat-bar"><i style="height:${Math.round(c / max * 100)}%"></i></div>`).join("");
+  $("heatLabels").innerHTML = days.map(d => `<span>${Number(d.slice(8))}</span>`).join("");
+}
+
+/* ===== 交互 ===== */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+// 抽屉
+function openDrawer() { $("drawer").classList.add("show"); $("mask").classList.add("show"); }
+function closeDrawer() { $("drawer").classList.remove("show"); $("mask").classList.remove("show"); }
+
+// 录入提交
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const rec = {
+    id: uid(), subject: $("fSubject").value, topic: $("fTopic").value.trim(),
+    type: $("fType").value, note: $("fNote").value.trim(),
+    createdAt: today(), lastReviewed: today(), nextReview: addDays(today(), INTERVALS[0]),
+    level: 1, reviews: 0, history: []
+  };
+  records.push(rec);
+  save(); render(); closeDrawer(); e.target.reset();
+  toast("已保存，明天进入首次复习");
+});
+
+// 卡片操作（事件委托）
+listEl.addEventListener("click", e => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const rec = records.find(r => r.id === btn.dataset.id);
+  if (!rec) return;
+  if (btn.dataset.act === "good") { applyReview(rec, "good"); toast(isMastered(rec) ? "已掌握，归档" : "掌握等级提升"); }
+  else if (btn.dataset.act === "weak") { applyReview(rec, "weak"); toast("已标记仍薄弱，明天再复习"); }
+  else if (btn.dataset.act === "del") { records = records.filter(r => r.id !== rec.id); toast("已删除"); }
+  save(); render();
+});
+
+// 视图切换
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    view = tab.dataset.view; render();
+  });
+});
+$("filterSubject").addEventListener("change", e => { filterSubject = e.target.value; render(); });
+$("filterType").addEventListener("change", e => { filterType = e.target.value; render(); });
+
+// 导出 CSV
+$("exportBtn").addEventListener("click", () => {
+  const head = ["录入日期", "科目", "知识点", "错因", "题目简述", "掌握等级", "复习次数", "上次复习", "下次复习", "状态"];
+  const rows = records.map(r => [
+    r.createdAt, r.subject, r.topic, r.type, r.note, r.level, r.reviews,
+    r.lastReviewed, r.nextReview || "—", isMastered(r) ? "已掌握" : "复习中"
+  ]);
+  const csv = [head, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "错题复习记录.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已导出 CSV");
+});
+
+// 初始化下拉选项
+SUBJECTS.forEach(s => {
+  $("fSubject").insertAdjacentHTML("beforeend", `<option>${s}</option>`);
+  $("filterSubject").insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`);
+});
+TYPES.forEach(t => $("filterType").insertAdjacentHTML("beforeend", `<option value="${t}">${t}</option>`));
+
+$("addBtn").addEventListener("click", openDrawer);
+$("mask").addEventListener("click", closeDrawer);
+render();
+</script>
+</body>
+</html>
