@@ -69,6 +69,11 @@ select{background:var(--glass);border:1px solid var(--glass-border);border-radiu
 .tag.subject{background:rgba(15,23,42,.06);color:var(--ink)}
 .tag.type{color:#fff}
 .note{font-size:14.5px;line-height:1.6;color:var(--ink)}
+.card-img{width:100%;border-radius:12px;object-fit:cover;max-height:180px;border:1px solid var(--line)}
+.img-preview{margin-top:8px}
+.img-preview img{max-width:100%;border-radius:12px;max-height:160px;border:1px solid var(--line)}
+.img-pick{display:flex;flex-direction:column;gap:8px}
+.img-pick input[type=file]{padding:10px;border:1px dashed var(--line);border-radius:12px;background:#fff;font-size:13px;color:var(--ink-2)}
 .card-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-2);font-size:12.5px}
 .mastery{display:flex;align-items:center;gap:8px}
 .ring{width:34px;height:34px;transform:rotate(-90deg)}
@@ -131,6 +136,8 @@ select{background:var(--glass);border:1px solid var(--glass-border);border-radiu
       </div>
     </div>
     <div class="actions">
+      <button class="btn ghost" id="exportJsonBtn">导出数据包</button>
+      <button class="btn ghost" id="importBtn">导入数据包</button>
       <button class="btn ghost" id="exportBtn">导出 CSV</button>
       <button class="btn primary" id="addBtn">录入错题</button>
     </div>
@@ -187,10 +194,18 @@ select{background:var(--glass);border:1px solid var(--glass-border);border-radiu
       <label>题目简述</label>
       <textarea id="fNote" placeholder="记录题目要点或错解思路，便于复习时回忆" required></textarea>
     </div>
+    <div class="field">
+      <label>题目图片（可选）</label>
+      <div class="img-pick">
+        <input type="file" id="fImage" accept="image/*">
+        <div class="img-preview" id="imgPreview" hidden></div>
+      </div>
+    </div>
     <button type="submit" class="btn primary">保存错题</button>
   </form>
 </aside>
 
+<input type="file" id="importFile" accept="application/json,.json" hidden>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -252,6 +267,7 @@ const isDue = rec => !isMastered(rec) && rec.nextReview <= today();
 let view = "due";
 let filterSubject = "";
 let filterType = "";
+let pendingImage = null; // 待保存的图片（压缩后的 dataURL）
 
 /* ===== DOM 引用 ===== */
 const $ = id => document.getElementById(id);
@@ -290,6 +306,7 @@ function cardHTML(rec) {
       </div>
     </div>
     <p class="note">${escapeHtml(rec.note)}</p>
+    ${rec.image ? `<img class="card-img" src="${rec.image}" alt="错题图片">` : ""}
     <div class="card-meta">
       <div class="mastery">${ringSVG(rec.level)}<span class="mastery-text">掌握等级 ${rec.level}/${MASTER_LEVEL} · 已复习 ${rec.reviews} 次</span></div>
       <span class="${due ? "due-soon" : ""}">${next}</span>
@@ -350,17 +367,58 @@ function toast(msg) {
 function openDrawer() { $("drawer").classList.add("show"); $("mask").classList.add("show"); }
 function closeDrawer() { $("drawer").classList.remove("show"); $("mask").classList.remove("show"); }
 
+// 图片压缩：等比缩放到最长边 800px，转 JPEG dataURL，控制本地存储体积
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", 0.72));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+$("fImage").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  const preview = $("imgPreview");
+  if (!file) { pendingImage = null; preview.hidden = true; preview.innerHTML = ""; return; }
+  try {
+    pendingImage = await fileToDataURL(file);
+    preview.innerHTML = `<img src="${pendingImage}" alt="图片预览">`;
+    preview.hidden = false;
+  } catch (err) {
+    toast("图片读取失败，请换一张");
+    pendingImage = null;
+  }
+});
+
 // 录入提交
-$("form").addEventListener("submit", e => {
+$("form").addEventListener("submit", async e => {
   e.preventDefault();
   const rec = {
     id: uid(), subject: $("fSubject").value, topic: $("fTopic").value.trim(),
-    type: $("fType").value, note: $("fNote").value.trim(),
+    type: $("fType").value, note: $("fNote").value.trim(), image: pendingImage,
     createdAt: today(), lastReviewed: today(), nextReview: addDays(today(), INTERVALS[0]),
     level: 1, reviews: 0, history: []
   };
   records.push(rec);
-  save(); render(); closeDrawer(); e.target.reset();
+  save(); render(); closeDrawer();
+  e.target.reset();
+  pendingImage = null;
+  $("imgPreview").hidden = true;
+  $("imgPreview").innerHTML = "";
   toast("已保存，明天进入首次复习");
 });
 
@@ -402,6 +460,38 @@ $("exportBtn").addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(a.href);
   toast("已导出 CSV");
+});
+
+// 导出数据包（JSON，含压缩后的图片），用于提交到仓库或在其他设备导入
+$("exportJsonBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "错题数据.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已导出数据包（含图片）");
+});
+
+// 导入数据包（替换当前本地记录）
+$("importBtn").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error("bad");
+      records = data;
+      save(); render();
+      toast("已导入数据包");
+    } catch (err) {
+      toast("数据包格式不正确");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
 });
 
 // 初始化下拉选项
